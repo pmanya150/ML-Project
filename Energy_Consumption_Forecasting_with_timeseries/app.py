@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import joblib
+from pathlib import Path
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
@@ -77,7 +78,28 @@ label {
 
 
 # ---------------- LOAD MODEL ----------------
-model = joblib.load("energy_demand_model.pkl")
+# Path is built relative to this file, not the launch directory.
+MODEL_PATH = Path(__file__).resolve().parent / "energy_demand_model.pkl"
+
+
+@st.cache_resource
+def load_model(path: Path):
+    return joblib.load(path)
+
+
+if not MODEL_PATH.exists():
+    st.error(f"Model file not found: {MODEL_PATH}")
+    st.write(
+        "Files in this folder:",
+        sorted(p.name for p in MODEL_PATH.parent.iterdir())
+    )
+    st.info(
+        "Make sure 'energy_demand_model.pkl' is committed to GitHub in the "
+        "same folder as app.py (check .gitignore for *.pkl)."
+    )
+    st.stop()
+
+model = load_model(MODEL_PATH)
 
 
 # ---------------- TITLE ----------------
@@ -117,7 +139,7 @@ day = st.number_input(
 )
 
 day_of_week = st.number_input(
-    "Day of Week",
+    "Day of Week (0 = Monday, 6 = Sunday)",
     min_value=0,
     max_value=6,
     value=0,
@@ -128,49 +150,19 @@ day_of_week = st.number_input(
 # ---------------- WEATHER INFORMATION ----------------
 st.subheader("🌦️ Weather Information")
 
-AWND = st.number_input(
-    "Average Wind Speed (AWND)",
-    value=0.0
-)
-
-PRCP = st.number_input(
-    "Precipitation (PRCP)",
-    value=0.0
-)
-
-TMAX = st.number_input(
-    "Maximum Temperature (TMAX)",
-    value=0.0
-)
-
-TMIN = st.number_input(
-    "Minimum Temperature (TMIN)",
-    value=0.0
-)
+AWND = st.number_input("Average Wind Speed (AWND)", value=0.0)
+PRCP = st.number_input("Precipitation (PRCP)", value=0.0)
+TMAX = st.number_input("Maximum Temperature (TMAX)", value=0.0)
+TMIN = st.number_input("Minimum Temperature (TMIN)", value=0.0)
 
 
 # ---------------- TIME SERIES FEATURES ----------------
 st.subheader("📊 Previous Demand Information")
 
-lag_1 = st.number_input(
-    "Demand at previous time (lag_1)",
-    value=0.0
-)
-
-lag_7 = st.number_input(
-    "Demand 7 periods ago (lag_7)",
-    value=0.0
-)
-
-rolling_7 = st.number_input(
-    "7-period Rolling Average",
-    value=0.0
-)
-
-rolling_30 = st.number_input(
-    "30-period Rolling Average",
-    value=0.0
-)
+lag_1 = st.number_input("Demand at previous time (lag_1)", value=0.0)
+lag_7 = st.number_input("Demand 7 periods ago (lag_7)", value=0.0)
+rolling_7 = st.number_input("7-period Rolling Average", value=0.0)
+rolling_30 = st.number_input("30-period Rolling Average", value=0.0)
 
 
 st.markdown("---")
@@ -196,19 +188,14 @@ if st.button("🔮 Predict Energy Demand"):
         "rolling_30": [rolling_30]
     })
 
-    # Make sure feature order is exactly the same
-    # as the features used during model training
-    input_data = input_data[model.feature_names_in_]
+    # Keep feature order identical to training, if the model stores it
+    if hasattr(model, "feature_names_in_"):
+        input_data = input_data[list(model.feature_names_in_)]
 
     prediction = model.predict(input_data)
 
-    st.success(
-        f"Predicted Energy Demand: {prediction[0]:.2f}"
-    )
+    st.success(f"Predicted Energy Demand: {prediction[0]:.2f}")
 
     st.subheader("📋 Input Data")
 
-    st.dataframe(
-        input_data,
-        use_container_width=True
-    )
+    st.dataframe(input_data, use_container_width=True)

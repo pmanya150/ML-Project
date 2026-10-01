@@ -7,7 +7,7 @@ An interactive machine learning web application built with **Streamlit** to fore
 ## 🚀 Live Demo
 
 Check out the live web app deployed on Streamlit Cloud:  
-👉 **[Launch Streamlit App](https://ml-project-savprfehtebdexmwjgjxry.streamlit.app/)**
+👉 **[Launch Streamlit App](https://ml-project-6xhyfropagkszmqsnhoujs.streamlit.app/)**
 
 ---
 
